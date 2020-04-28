@@ -1,35 +1,30 @@
 
 import time
 import random
-from multiprocessing import Process,Lock
+from multiprocessing import current_process, Pool
 
 
-class WriteProcess(Process):
-    """ Write file """
+def run(file_name, num):
 
-    def __init__(self, file_name, num, lock, *args, **kwargs):
-        self.file_name = file_name
-        self.num = num
-        self.lock = lock
-        super().__init__(*args, **kwargs)
+    with open(file_name, 'a+') as f:
+        curr_proc = current_process()
+        content = '{0} - {1} --- {2} \n'.format(curr_proc.name,
+                                                curr_proc.pid, num)
+        f.write(content)
+        time.sleep(random.randint(1, 3))
+        print(content)
 
-    def run(self):
-        try:
-            self.lock.acquire()
-            for i in range(5):
-                with open(self.file_name, 'a+') as f:
-                    content = 'current name: {0}, pid:{1}  --- {2} \n'.format(
-                        self.name, self.pid, self.num)
-                    f.write(content)
-                    time.sleep(random.randint(1,3))
-                    print(content)
-        finally:
-            self.lock.release()
+    return 'ok'
 
 
 if __name__ == "__main__":
-    file_name = 'test.txt'
-    lock = Lock()
-    for n in range(5):
-        p = WriteProcess(file_name, n, lock)
-        p.start()
+    file_name = 'test_pool.txt'
+    pool = Pool(2)
+    for i in range(20):
+        # # sycnc
+        # rest = pool.apply(run, args=(file_name, i))
+        # async
+        rest = pool.apply_async(run, args=(file_name, i))
+        print('{0}----- {1}'.format(i, rest.get()))
+    pool.close()
+    pool.join()
